@@ -3,21 +3,24 @@ package clon
 import (
 	"reflect"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestCLON(t *testing.T) {
 	for _, tt := range []struct {
-		in  []string
-		out any
+		name string
+		in   []string
+		out  any
 	}{
-		{[]string{
+		{"basic", []string{
 			"name=John",
 			"email=john@example.com",
 		}, map[string]any{
 			"name":  "John",
 			"email": "john@example.com",
 		}},
-		{[]string{
+		{"basic raw values", []string{
 			"name=John",
 			"age:=29",
 			"married:=false",
@@ -32,7 +35,7 @@ func TestCLON(t *testing.T) {
 				"tool": "HTTPie",
 			},
 		}},
-		{[]string{
+		{"basic nested", []string{
 			"platform[name]=HTTPie",
 			"platform[about][mission]='Make APIs simple and intuitive'",
 			"platform[about][homepage]=httpie.io",
@@ -57,7 +60,7 @@ func TestCLON(t *testing.T) {
 				},
 			},
 		}},
-		{[]string{
+		{"nested example", []string{
 			"category=tools",
 			"search[type]=id",
 			"search[id]:=1",
@@ -68,7 +71,7 @@ func TestCLON(t *testing.T) {
 				"type": "id",
 			},
 		}},
-		{[]string{
+		{"append example", []string{
 			"category=tools",
 			"search[type]=keyword",
 			"search[keywords][]=APIs",
@@ -83,7 +86,7 @@ func TestCLON(t *testing.T) {
 				"type": "keyword",
 			},
 		}},
-		{[]string{
+		{"indexed example", []string{
 			"category=tools",
 			"search[type]=keyword",
 			"search[keywords][1]=APIs",
@@ -98,7 +101,7 @@ func TestCLON(t *testing.T) {
 				"type": "keyword",
 			},
 		}},
-		{[]string{
+		{"indexed and appened example", []string{
 			"category=tools",
 			"search[type]=platforms",
 			"search[platforms][]=Terminal",
@@ -110,16 +113,16 @@ func TestCLON(t *testing.T) {
 				"platforms": []any{
 					"Terminal",
 					"Desktop",
-					"",
+					nil,
 					"Mobile",
 				},
 				"type": "platforms",
 			},
 		}},
-		{[]string{
+		{"raw and appended example", []string{
 			"category=tools",
 			"search[type]=platforms",
-			"search[platforms][]:='[\"Terminal\", \"Desktop\"]'",
+			"search[platforms]:='[\"Terminal\", \"Desktop\"]'",
 			"search[platforms][]=Web",
 			"search[platforms][]=Mobile",
 		}, map[string]any{
@@ -134,7 +137,7 @@ func TestCLON(t *testing.T) {
 				"type": "platforms",
 			},
 		}},
-		{[]string{
+		{"top level array", []string{
 			"[]:=1",
 			"[]:=2",
 			"[]:=3",
@@ -143,7 +146,7 @@ func TestCLON(t *testing.T) {
 			2,
 			3,
 		}},
-		{[]string{
+		{"top level array nested", []string{
 			"[0][type]=platform",
 			"[0][name]=terminal",
 			"[1][type]=platform",
@@ -159,12 +162,15 @@ func TestCLON(t *testing.T) {
 			},
 		}},
 	} {
-		got, err := Parse(tt.in)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(got, tt.out) {
-			t.Fatalf("expected '%#v' but got '%#v'", tt.out, got)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Parse(tt.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, tt.out) {
+				t.Fatalf("expected '%s' but got '%s'", spew.Sdump(tt.out), spew.Sdump(got))
+			}
+		})
+
 	}
 }
