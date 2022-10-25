@@ -30,7 +30,7 @@ func Parse(args []string) (any, error) {
 	}
 	v := make(map[string]any)
 	if pargs[0].tla {
-		v["root"] = []any{}
+		v["tla"] = []any{}
 	}
 	for _, a := range pargs {
 		if err := applyArg(v, a); err != nil {
@@ -38,7 +38,7 @@ func Parse(args []string) (any, error) {
 		}
 	}
 	if pargs[0].tla {
-		return v["root"], nil
+		return v["tla"], nil
 	}
 	return v, nil
 }
@@ -66,7 +66,7 @@ func parseArg(s string) (a arg) {
 	path = strings.ReplaceAll(path, "]", "")
 	a.path = strings.Split(path, "[")
 	if a.path[0] == "" {
-		a.path = append([]string{"root"}, a.path[1:]...)
+		a.path = append([]string{"tla"}, a.path[1:]...)
 		a.tla = true
 	}
 	return a
@@ -99,17 +99,14 @@ func applyArg(m map[string]any, v arg) error {
 	cur = m
 	for idx, part := range v.path {
 		isLast := idx == len(v.path)-1
-		// isSecondLast := idx == len(v.path)-2
 		if isLast && !v.append {
+			// set value if map
 			if cm, ok := cur.(map[string]any); ok {
 				cm[part] = v.value
 				return nil
 			}
+			// set value if slice
 			if cs, ok := cur.([]any); ok {
-				if v.append {
-					cs = append(cs, v.value)
-					return nil
-				}
 				i, err := strconv.Atoi(part)
 				if err != nil {
 					return err
@@ -134,12 +131,15 @@ func applyArg(m map[string]any, v arg) error {
 		}
 		switch c := cur.(type) {
 		case map[string]any:
+			// map key exists, set to current
 			if _, ok := c[part]; ok {
 				cur = c[part]
 				cs, ok := cur.([]any)
-				if ok && v.append {
+				// if last part and is slice, do append
+				if ok && isLast && v.append {
 					c[part] = append(cs, v.value)
 				}
+				// if slice, and next part index is larger
 				if ok && nextIndex >= len(cs) {
 					needed := (nextIndex + 1) - len(cs)
 					for i := 0; i < needed; i++ {
@@ -149,6 +149,7 @@ func applyArg(m map[string]any, v arg) error {
 				}
 				continue
 			}
+			// map key does not exist
 			if nextIsMap {
 				c[part] = make(map[string]any)
 			} else {
@@ -162,28 +163,34 @@ func applyArg(m map[string]any, v arg) error {
 					}
 				}
 			}
+			// set to current
 			cur = c[part]
 		case []any:
 			i, err := strconv.Atoi(part)
 			if err != nil {
 				panic("non-numeric index for slice")
 			}
+			// slice index is valid/"exists", set to current
 			if i < len(c) {
 				cur = c[i]
 				cs, ok := cur.([]any)
-				if ok && v.append {
+				// if last part and is slice, do append
+				if ok && isLast && v.append {
 					c[i] = append(cs, v.value)
 				}
+				// if slice, and next part index is larger
 				if ok && nextIndex >= len(cs) {
 					needed := (nextIndex + 1) - len(cs)
 					for i := 0; i < needed; i++ {
 						c[i] = append(cs, nil)
 					}
 				}
+				// if nil, it doesn't "exist"
 				if c[i] != nil {
 					continue
 				}
 			}
+			// slice index is "empty"
 			if nextIsMap {
 				c[i] = make(map[string]any)
 			} else {
@@ -197,6 +204,7 @@ func applyArg(m map[string]any, v arg) error {
 					}
 				}
 			}
+			// set to current
 			cur = c[i]
 		default:
 			panic("unexpected type")
