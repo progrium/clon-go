@@ -52,6 +52,17 @@ type arg struct {
 
 func parseArg(s string) (a arg) {
 	kv := strings.Split(s, "=")
+	if len(kv) == 1 {
+		a.path = []string{"tla"}
+		a.tla = true
+		a.append = true
+		if strings.HasPrefix(s, ":") {
+			a.value = parseRaw(s[1:])
+		} else {
+			a.value = s
+		}
+		return
+	}
 	path := kv[0]
 	if strings.HasSuffix(path, ":") {
 		path = path[:len(path)-1]
@@ -79,19 +90,16 @@ func parseRaw(v string) any {
 	if v == "false" {
 		return false
 	}
-	if strings.HasPrefix(v, "'") && strings.HasSuffix(v, "'") {
-		v = strings.Trim(v, "'")
-		var vv any
-		if err := json.Unmarshal([]byte(v), &vv); err != nil {
-			panic(err)
-		}
-		return vv
-	}
 	i, err := strconv.Atoi(v)
-	if err != nil {
+	if err == nil {
+		return i
+	}
+	v = strings.Trim(v, "'")
+	var vv any
+	if err := json.Unmarshal([]byte(v), &vv); err != nil {
 		panic(err)
 	}
-	return i
+	return vv
 }
 
 func applyArg(m map[string]any, v arg) error {

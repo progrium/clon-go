@@ -1,10 +1,9 @@
 package clon
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestCLON(t *testing.T) {
@@ -20,6 +19,7 @@ func TestCLON(t *testing.T) {
 			"name":  "John",
 			"email": "john@example.com",
 		}},
+
 		{"basic raw values", []string{
 			"name=John",
 			"age:=29",
@@ -35,6 +35,7 @@ func TestCLON(t *testing.T) {
 				"tool": "HTTPie",
 			},
 		}},
+
 		{"basic nested", []string{
 			"platform[name]=HTTPie",
 			"platform[about][mission]='Make APIs simple and intuitive'",
@@ -60,6 +61,7 @@ func TestCLON(t *testing.T) {
 				},
 			},
 		}},
+
 		{"nested example", []string{
 			"category=tools",
 			"search[type]=id",
@@ -71,6 +73,7 @@ func TestCLON(t *testing.T) {
 				"type": "id",
 			},
 		}},
+
 		{"append example", []string{
 			"category=tools",
 			"search[type]=keyword",
@@ -86,6 +89,7 @@ func TestCLON(t *testing.T) {
 				"type": "keyword",
 			},
 		}},
+
 		{"indexed example", []string{
 			"category=tools",
 			"search[type]=keyword",
@@ -101,6 +105,7 @@ func TestCLON(t *testing.T) {
 				"type": "keyword",
 			},
 		}},
+
 		{"indexed and appened example", []string{
 			"category=tools",
 			"search[type]=platforms",
@@ -119,6 +124,7 @@ func TestCLON(t *testing.T) {
 				"type": "platforms",
 			},
 		}},
+
 		{"raw and appended example", []string{
 			"category=tools",
 			"search[type]=platforms",
@@ -137,6 +143,7 @@ func TestCLON(t *testing.T) {
 				"type": "platforms",
 			},
 		}},
+
 		{"top level array", []string{
 			"[]:=1",
 			"[]:=2",
@@ -146,6 +153,19 @@ func TestCLON(t *testing.T) {
 			2,
 			3,
 		}},
+
+		{"top level array shorthand", []string{
+			":1",
+			"string",
+			":true",
+			`:{"foo": "bar"}`,
+		}, []any{
+			1,
+			"string",
+			true,
+			map[string]any{"foo": "bar"},
+		}},
+
 		{"top level array nested", []string{
 			"[0][type]=platform",
 			"[0][name]=terminal",
@@ -168,9 +188,14 @@ func TestCLON(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(got, tt.out) {
-				t.Fatalf("expected '%s' but got '%s'", spew.Sdump(tt.out), spew.Sdump(got))
+				t.Fatalf("expected '%s' but got '%s'", dump(tt.out), dump(got))
 			}
 		})
 
 	}
+}
+
+func dump(v any) string {
+	b, _ := json.MarshalIndent(v, "", "  ")
+	return string(b)
 }
